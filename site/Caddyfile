@@ -1,0 +1,22 @@
+{
+	# Email utilisé par Let's Encrypt pour les certificats HTTPS
+	email {$ACME_EMAIL}
+}
+
+# Domaine(s) servis — défini via SITE_DOMAIN (apex + www).
+# Caddy obtient et renouvelle automatiquement le certificat TLS.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# API → backend Express
+	handle /api/* {
+		reverse_proxy server:3001
+	}
+
+	# Site statique (SPA React) — fallback vers index.html pour le routing client
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
