@@ -10,19 +10,14 @@ export default function Contact() {
     {
       icon: Mail,
       label: 'Email',
-      value: 'contact@aappma-villerslac.fr',
-      href: 'mailto:contact@aappma-villerslac.fr',
+      value: 'sebastiendrozgrey@gmail.com',
+      href: 'mailto:sebastiendrozgrey@gmail.com',
     },
     {
       icon: Phone,
       label: 'Telephone',
-      value: '03 81 XX XX XX',
-    },
-    {
-      icon: Clock,
-      label: 'Permanences',
-      value: 'Samedi matin de 9h a 12h (en saison)',
-    },
+      value: '06 33 07 10 36',
+    }
   ];
 
   return (
