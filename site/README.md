@@ -1,16 +1,67 @@
-# React + Vite
+# Site de l'AAPPMA de Villers-le-Lac
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Site vitrine de l'association (actualités, événements, présentation du
+territoire) avec un espace d'administration protégé par mot de passe.
 
-Currently, two official plugins are available:
+## Organisation
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```
+site/
+├── src/              front React (Vite + Tailwind CSS v4 + React Router)
+│   ├── components/   en-tête, pied de page, sections de l'accueil, briques admin
+│   ├── context/      AuthContext (session) et DataContext (données + API)
+│   ├── hooks/        useAsyncAction (appels API avec gestion d'erreur)
+│   ├── pages/        pages publiques et pages d'administration
+│   └── api.js        client HTTP unique (jeton, erreurs, 401)
+├── server/           API Express 5 + Prisma (MySQL)
+├── public/photos/    photos servies au public
+└── docker-compose.yml
+```
 
-## React Compiler
+## Développement
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Deux terminaux, une base MySQL accessible.
 
-## Expanding the Oxlint configuration
+```sh
+# API — http://localhost:3001
+cd server
+npm install
+cp ../.env.example .env      # renseigner DATABASE_URL, JWT_SECRET, ADMIN_*
+npm run db:push
+npm run db:seed
+npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+# Front — http://localhost:5173
+cd ..
+npm install
+npm run dev
+```
+
+Le serveur de développement Vite proxifie `/api` vers `http://localhost:3001` :
+aucune variable d'URL à configurer côté front.
+
+Scripts disponibles :
+
+| Commande          | Effet                                   |
+|-------------------|-----------------------------------------|
+| `npm run dev`     | serveur de développement + rechargement |
+| `npm run build`   | build de production dans `dist/`        |
+| `npm run preview` | prévisualisation du build               |
+| `npm run lint`    | analyse statique (Oxlint)               |
+
+## Contenus
+
+| Section       | Visibilité                                          |
+|---------------|-----------------------------------------------------|
+| Actualités    | publique — accueil et page `/actualites`            |
+| Événements    | publique — page `/evenements`                       |
+| Galerie       | administration (les photos publiques sont dans `public/photos`) |
+| Documents     | **administration uniquement** — registre interne, jamais publié |
+| Adhérents     | **administration uniquement**                       |
+
+L'envoi de fichiers (documents, photos) n'est pas géré par le site : les
+éléments sont référencés par leur nom de fichier ou leur adresse.
+
+## Mise en production
+
+Voir [DEPLOY.md](./DEPLOY.md).

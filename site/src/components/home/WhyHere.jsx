@@ -1,62 +1,62 @@
 import { TreePine, Fish, Shield, Users, MapPin, Droplets } from 'lucide-react';
 
-export default function WhyHere() {
-  const reasons = [
-    {
-      icon: TreePine,
-      title: 'Cadre naturel preserve',
-      description:
-        "Gorges sauvages, forets denses et falaises calcaires : un decor a couper le souffle.",
-    },
-    {
-      icon: Fish,
-      title: 'Poissons sauvages',
-      description:
-        "Truites fario, ombres communs, brochets... une biodiversite piscicole remarquable.",
-    },
-    {
-      icon: Droplets,
-      title: "Qualite de l'eau",
-      description:
-        "Des eaux cristallines de premiere categorie, regulierement surveillees et protegees.",
-    },
-    {
-      icon: Shield,
-      title: 'Gestion raisonnee',
-      description:
-        "Pas de deversement : on mise sur la reproduction naturelle et la protection des habitats.",
-    },
-    {
-      icon: Users,
-      title: 'Convivialite',
-      description:
-        "Une association a taille humaine, ou chaque membre compte et participe.",
-    },
-    {
-      icon: MapPin,
-      title: 'Parcours varies',
-      description:
-        "Riviere, ruisseau, lac : trois ambiances differentes a quelques kilometres.",
-    },
-  ];
+const REASONS = [
+  {
+    icon: TreePine,
+    title: 'Cadre naturel préservé',
+    description:
+      'Gorges sauvages, forêts denses et falaises calcaires : un décor à couper le souffle.',
+  },
+  {
+    icon: Fish,
+    title: 'Poissons sauvages',
+    description:
+      'Truites fario, ombres communs, brochets… une biodiversité piscicole remarquable.',
+  },
+  {
+    icon: Droplets,
+    title: 'Qualité de l’eau',
+    description:
+      'Des eaux cristallines de première catégorie, régulièrement surveillées et protégées.',
+  },
+  {
+    icon: Shield,
+    title: 'Gestion raisonnée',
+    description:
+      'Pas de déversement : on mise sur la reproduction naturelle et la protection des habitats.',
+  },
+  {
+    icon: Users,
+    title: 'Convivialité',
+    description:
+      'Une association à taille humaine, où chaque membre compte et participe.',
+  },
+  {
+    icon: MapPin,
+    title: 'Parcours variés',
+    description:
+      'Rivière, ruisseau, lac : trois ambiances différentes à quelques kilomètres.',
+  },
+];
 
+export default function WhyHere() {
   return (
     <section id="pourquoi" className="py-20 lg:py-28 bg-green-dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
+        {/* En-tête de section */}
         <div className="text-center mb-16 lg:mb-20">
           <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl text-white font-semibold leading-tight mb-6">
-            Pourquoi pecher <em className="italic font-normal">ici ?</em>
+            Pourquoi pêcher <em className="italic font-normal">ici&nbsp;?</em>
           </h2>
           <p className="text-white/70 text-lg leading-relaxed max-w-2xl mx-auto">
-            Six bonnes raisons de rejoindre notre AAPPMA et decouvrir
+            Six bonnes raisons de rejoindre notre AAPPMA et de découvrir
             les gorges du Doubs.
           </p>
         </div>
 
-        {/* Features grid */}
+        {/* Grille */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {reasons.map((r) => (
+          {REASONS.map((r) => (
             <div
               key={r.title}
               className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-7 hover:bg-white/10 transition-colors"

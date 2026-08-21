@@ -6,6 +6,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import Home from './pages/Home';
 import News from './pages/News';
 import Events from './pages/Events';
+import NotFound from './pages/NotFound';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import AdminNews from './pages/admin/AdminNews';
@@ -16,9 +17,9 @@ import AdminGallery from './pages/admin/AdminGallery';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <DataProvider>
           <Routes>
             {/* Public */}
             <Route element={<Layout />}>
@@ -26,9 +27,10 @@ export default function App() {
               <Route path="/actualites" element={<News />} />
               <Route path="/evenements" element={<Events />} />
               <Route path="/admin/login" element={<Login />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
 
-            {/* Admin */}
+            {/* Administration */}
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<Dashboard />} />
               <Route path="/admin/actualites" element={<AdminNews />} />
@@ -38,8 +40,8 @@ export default function App() {
               <Route path="/admin/galerie" element={<AdminGallery />} />
             </Route>
           </Routes>
-        </BrowserRouter>
-      </DataProvider>
-    </AuthProvider>
+        </DataProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

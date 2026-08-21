@@ -1,79 +1,120 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { formatDateShort } from '../../utils/formatDate';
+import PageHeader from '../../components/admin/PageHeader';
+import Modal from '../../components/admin/Modal';
+import Alert from '../../components/admin/Alert';
+import Field, { INPUT_CLASS } from '../../components/admin/Field';
+
+const EMPTY = { title: '', date: '', excerpt: '', content: '', image: '' };
 
 export default function AdminNews() {
   const { news, addNews, updateNews, deleteNews } = useData();
+  const { error, setError, busy, run } = useAsyncAction();
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: '', date: '', excerpt: '', content: '', image: '' });
+  const [form, setForm] = useState(EMPTY);
+
+  const sorted = [...news].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const openNew = () => {
-    setForm({ title: '', date: new Date().toISOString().split('T')[0], excerpt: '', content: '', image: '' });
+    setError('');
+    setForm({ ...EMPTY, date: new Date().toISOString().slice(0, 10) });
     setEditing('new');
   };
 
   const openEdit = (item) => {
-    setForm({ title: item.title, date: item.date, excerpt: item.excerpt, content: item.content, image: item.image || '' });
+    setError('');
+    setForm({
+      title: item.title,
+      date: item.date,
+      excerpt: item.excerpt,
+      content: item.content,
+      image: item.image || '',
+    });
     setEditing(item);
   };
 
-  const save = () => {
-    if (!form.title || !form.date) return;
-    if (editing === 'new') {
-      addNews(form);
-    } else {
-      updateNews(editing.id, form);
-    }
-    setEditing(null);
+  const save = async () => {
+    const ok = await run(() =>
+      editing === 'new' ? addNews(form) : updateNews(editing.id, form)
+    );
+    if (ok) setEditing(null);
+  };
+
+  const remove = (item) => {
+    if (!window.confirm(`Supprimer définitivement l’actualité « ${item.title} » ?`)) return;
+    run(() => deleteNews(item.id));
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-2xl font-semibold text-green-dark">Actualites</h1>
-        <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 bg-green-dark hover:bg-green-medium text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
-          <Plus size={16} /> Ajouter
-        </button>
-      </div>
+      <PageHeader title="Actualités" actionLabel="Ajouter" onAction={openNew} />
+
+      {!editing && (
+        <div className="mb-4">
+          <Alert>{error}</Alert>
+        </div>
+      )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-heading text-lg font-semibold text-green-dark">
-                {editing === 'new' ? 'Nouvelle actualite' : 'Modifier'}
-              </h2>
-              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={20} /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
-                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-dark/30" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-dark/30" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Extrait</label>
-                <textarea rows={2} value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-dark/30 resize-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contenu</label>
-                <textarea rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-dark/30 resize-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL image (optionnel)</label>
-                <input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-dark/30" placeholder="/photos/..." />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 cursor-pointer">Annuler</button>
-              <button onClick={save} className="px-5 py-2 bg-green-dark hover:bg-green-medium text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">Enregistrer</button>
-            </div>
-          </div>
-        </div>
+        <Modal
+          title={editing === 'new' ? 'Nouvelle actualité' : 'Modifier l’actualité'}
+          onClose={() => setEditing(null)}
+          onSubmit={save}
+          busy={busy}
+        >
+          <Field label="Titre" htmlFor="news-title">
+            <input
+              id="news-title"
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className={INPUT_CLASS}
+            />
+          </Field>
+          <Field label="Date" htmlFor="news-date">
+            <input
+              id="news-date"
+              type="date"
+              required
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className={INPUT_CLASS}
+            />
+          </Field>
+          <Field label="Extrait (affiché sur l’accueil)" htmlFor="news-excerpt">
+            <textarea
+              id="news-excerpt"
+              rows={2}
+              required
+              value={form.excerpt}
+              onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
+              className={`${INPUT_CLASS} resize-none`}
+            />
+          </Field>
+          <Field label="Contenu" htmlFor="news-content">
+            <textarea
+              id="news-content"
+              rows={4}
+              required
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              className={`${INPUT_CLASS} resize-none`}
+            />
+          </Field>
+          <Field label="Adresse de l’image (facultatif)" htmlFor="news-image">
+            <input
+              id="news-image"
+              value={form.image}
+              onChange={(e) => setForm({ ...form, image: e.target.value })}
+              className={INPUT_CLASS}
+              placeholder="/photos/…"
+            />
+          </Field>
+          <Alert>{error}</Alert>
+        </Modal>
       )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -82,22 +123,47 @@ export default function AdminNews() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Titre</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500 hidden sm:table-cell">Date</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500 hidden sm:table-cell">
+                  Date
+                </th>
                 <th className="px-5 py-3 font-medium text-gray-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {[...news].sort((a, b) => new Date(b.date) - new Date(a.date)).map((item) => (
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-gray-400">
+                    Aucune actualité pour le moment.
+                  </td>
+                </tr>
+              )}
+              {sorted.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50">
                   <td className="px-5 py-3.5">
                     <p className="font-medium text-gray-800">{item.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 sm:hidden">{formatDateShort(item.date)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 sm:hidden">
+                      {formatDateShort(item.date)}
+                    </p>
                   </td>
-                  <td className="px-5 py-3.5 text-gray-500 hidden sm:table-cell">{formatDateShort(item.date)}</td>
+                  <td className="px-5 py-3.5 text-gray-500 hidden sm:table-cell">
+                    {formatDateShort(item.date)}
+                  </td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-green-dark hover:bg-green-dark/5 transition-colors cursor-pointer"><Pencil size={15} /></button>
-                      <button onClick={() => deleteNews(item.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"><Trash2 size={15} /></button>
+                      <button
+                        onClick={() => openEdit(item)}
+                        aria-label={`Modifier ${item.title}`}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-green-dark hover:bg-green-dark/5 transition-colors cursor-pointer"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => remove(item)}
+                        aria-label={`Supprimer ${item.title}`}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </td>
                 </tr>

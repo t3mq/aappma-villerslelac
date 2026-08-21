@@ -2,28 +2,28 @@ export default function Team() {
   return (
     <section id="equipe" className="py-20 lg:py-28 bg-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
+        {/* En-tête de section */}
         <div className="max-w-3xl mb-16 lg:mb-20">
           <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl text-green-dark font-semibold leading-tight mb-6">
-            Derriere l'association,{' '}
+            Derrière l’association,{' '}
             <span className="block">
-              des <em className="italic font-normal">passionnes.</em>
+              des <em className="italic font-normal">passionnés.</em>
             </span>
           </h2>
           <p className="text-gray-600 text-lg leading-relaxed max-w-xl">
-            Notre AAPPMA, c'est avant tout une bande de passionnes benevoles
-            qui consacrent leur temps libre a la protection et a la mise en
-            valeur de nos cours d'eau.
+            Notre AAPPMA, c’est avant tout une bande de passionnés bénévoles
+            qui consacrent leur temps libre à la protection et à la mise en
+            valeur de nos cours d’eau.
           </p>
         </div>
 
-        {/* Photo grid */}
+        {/* Grille de photos */}
         <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-          {/* Large photo */}
+          {/* Grande photo */}
           <div className="relative overflow-hidden rounded-2xl aspect-[4/3]">
             <img
               src="/photos/PHOTO-2025-05-24-12-41-28.jpg"
-              alt="Membres de l'association"
+              alt="Membres de l’association"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -32,17 +32,17 @@ export default function Team() {
                 Des moments de partage
               </p>
               <p className="text-white/75 text-sm mt-1">
-                Assemblees, sorties, repas : l'esprit associatif au quotidien
+                Assemblées, sorties, repas : l’esprit associatif au quotidien
               </p>
             </div>
           </div>
 
-          {/* Two stacked photos */}
+          {/* Deux photos superposées */}
           <div className="grid gap-6 lg:gap-8">
             <div className="relative overflow-hidden rounded-2xl aspect-[16/9]">
               <img
                 src="/photos/PHOTO-2024-11-03-12-00-17.jpg"
-                alt="Membres de l'association en exterieur"
+                alt="Membres de l’association en extérieur"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -61,7 +61,7 @@ export default function Team() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               <div className="absolute bottom-4 left-5">
                 <p className="font-heading text-lg text-white font-semibold">
-                  Repas de l'association
+                  Repas de l’association
                 </p>
               </div>
             </div>

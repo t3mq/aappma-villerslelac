@@ -1,7 +1,13 @@
 const API = import.meta.env.VITE_API_URL || '/api';
+const TOKEN_KEY = 'aappma_token';
+
+// Émis dès qu'une requête revient en 401 : le contexte d'authentification s'y
+// abonne pour repasser l'interface en « déconnecté ». Sans cela, l'admin
+// resterait affiché comme connecté avec un jeton expiré.
+export const UNAUTHORIZED_EVENT = 'aappma:unauthorized';
 
 function getToken() {
-  return localStorage.getItem('aappma_token');
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 async function request(path, options = {}) {
@@ -9,24 +15,34 @@ async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    localStorage.removeItem('aappma_token');
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, { ...options, headers });
+  } catch {
+    throw new Error('Serveur injoignable. Vérifiez votre connexion.');
   }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+  }
+
+  // Le corps n'est pas toujours du JSON (erreur renvoyée par le proxy,
+  // réponse vide…) : on ne casse pas sur un parsing impossible.
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) throw new Error(data?.error || `Erreur serveur (${res.status}).`);
   return data;
 }
 
-// Auth
+// Authentification
 export const authApi = {
-  login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (email, password) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: () => request('/auth/me'),
 };
 
-// News
+// Actualités
 export const newsApi = {
   getAll: () => request('/news'),
   create: (data) => request('/news', { method: 'POST', body: JSON.stringify(data) }),
@@ -34,7 +50,7 @@ export const newsApi = {
   delete: (id) => request(`/news/${id}`, { method: 'DELETE' }),
 };
 
-// Events
+// Événements
 export const eventsApi = {
   getAll: () => request('/events'),
   create: (data) => request('/events', { method: 'POST', body: JSON.stringify(data) }),
@@ -42,14 +58,14 @@ export const eventsApi = {
   delete: (id) => request(`/events/${id}`, { method: 'DELETE' }),
 };
 
-// Documents
+// Documents — réservés à l'espace d'administration, jamais exposés aux visiteurs.
 export const documentsApi = {
   getAll: () => request('/documents'),
   create: (data) => request('/documents', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id) => request(`/documents/${id}`, { method: 'DELETE' }),
 };
 
-// Members
+// Adhérents
 export const membersApi = {
   getAll: () => request('/members'),
   create: (data) => request('/members', { method: 'POST', body: JSON.stringify(data) }),
@@ -57,7 +73,7 @@ export const membersApi = {
   delete: (id) => request(`/members/${id}`, { method: 'DELETE' }),
 };
 
-// Photos
+// Galerie photos
 export const photosApi = {
   getAll: () => request('/photos'),
   create: (data) => request('/photos', { method: 'POST', body: JSON.stringify(data) }),

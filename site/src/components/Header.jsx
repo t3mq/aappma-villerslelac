@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+const LINKS = [
+  { label: 'Territoire', to: '/#territoire' },
+  { label: 'Actualités', to: '/actualites' },
+  { label: 'Événements', to: '/evenements' },
+  { label: 'Contact', to: '/#contact' },
+];
+
 export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -18,29 +25,24 @@ export default function Header() {
     setOpen(false);
   }, [location]);
 
-  const links = [
-    { label: 'Territoire', href: '/#territoire' },
-    { label: 'Actualites', href: '/actualites' },
-    { label: 'Evenements', href: '/evenements' },
-    { label: 'Contact', href: '/#contact' },
-  ];
-
   const needsSolid = scrolled || open || !isHome;
 
-  const handleNavClick = (href) => {
+  // Depuis une autre page, la navigation vers `/#ancre` suffit : Layout
+  // fait défiler jusqu'à la section. Sur l'accueil, l'URL ne change pas
+  // toujours (même ancre cliquée deux fois), d'où le défilement manuel.
+  const handleAnchorClick = (to) => {
     setOpen(false);
-    if (href.startsWith('/#') && isHome) {
-      const el = document.querySelector(href.replace('/', ''));
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (!isHome) return;
+    const target = document.querySelector(to.slice(1));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const isAnchor = (to) => to.startsWith('/#');
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        needsSolid
-          ? 'bg-green-dark/95 backdrop-blur-md shadow-lg'
-          : 'bg-transparent'
+        needsSolid ? 'bg-green-dark/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
@@ -57,32 +59,20 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Desktop nav */}
+          {/* Navigation bureau */}
           <nav className="hidden md:flex items-center gap-7">
-            {links.map((link) =>
-              link.href.startsWith('/#') ? (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => handleNavClick(link.href)}
-                  className="text-white/75 hover:text-white text-[13px] font-medium tracking-wide uppercase transition-colors"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={`text-[13px] font-medium tracking-wide uppercase transition-colors ${
-                    location.pathname === link.href
-                      ? 'text-white'
-                      : 'text-white/75 hover:text-white'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              )
-            )}
+            {LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={isAnchor(link.to) ? () => handleAnchorClick(link.to) : undefined}
+                className={`text-[13px] font-medium tracking-wide uppercase transition-colors ${
+                  location.pathname === link.to ? 'text-white' : 'text-white/75 hover:text-white'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
             <a
               href="https://www.cartedepeche.fr"
               target="_blank"
@@ -93,41 +83,31 @@ export default function Header() {
             </a>
           </nav>
 
-          {/* Mobile hamburger */}
+          {/* Menu mobile */}
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden text-white/80 hover:text-white p-2 transition-colors"
-            aria-label="Menu"
+            className="md:hidden text-white/80 hover:text-white p-2 transition-colors cursor-pointer"
+            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={open}
           >
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       {open && (
         <div className="md:hidden border-t border-white/10 pb-5 bg-green-dark/95 backdrop-blur-md">
           <nav className="px-5 pt-4 space-y-4">
-            {links.map((link) =>
-              link.href.startsWith('/#') ? (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => handleNavClick(link.href)}
-                  className="block text-white/80 hover:text-white text-sm font-medium tracking-wide uppercase transition-colors"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="block text-white/80 hover:text-white text-sm font-medium tracking-wide uppercase transition-colors"
-                >
-                  {link.label}
-                </Link>
-              )
-            )}
+            {LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={isAnchor(link.to) ? () => handleAnchorClick(link.to) : () => setOpen(false)}
+                className="block text-white/80 hover:text-white text-sm font-medium tracking-wide uppercase transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
             <a
               href="https://www.cartedepeche.fr"
               target="_blank"

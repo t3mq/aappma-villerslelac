@@ -1,12 +1,14 @@
+# La syntaxe ${VAR:?message} fait échouer `docker compose up` si la variable est
+# absente, plutôt que de démarrer la pile avec des mots de passe vides.
 services:
   db:
     image: mysql:8
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?définir MYSQL_DATABASE dans .env}
+      MYSQL_USER: ${MYSQL_USER:?définir MYSQL_USER dans .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?définir MYSQL_PASSWORD dans .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?définir MYSQL_ROOT_PASSWORD dans .env}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -20,28 +22,41 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
-      JWT_SECRET: ${JWT_SECRET}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?définir JWT_SECRET dans .env (openssl rand -hex 32)}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?définir ADMIN_EMAIL dans .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?définir ADMIN_PASSWORD dans .env}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       PORT: 3001
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
   web:
     build: .
     restart: unless-stopped
     environment:
-      SITE_DOMAIN: ${SITE_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
+      SITE_DOMAIN: ${SITE_DOMAIN:?définir SITE_DOMAIN dans .env}
+      ACME_EMAIL: ${ACME_EMAIL:?définir ACME_EMAIL dans .env}
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"   # HTTP/3
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     volumes:
-      - caddy_data:/data      # certificats TLS (persistés → pas de re-émission)
+      - caddy_data:/data      # certificats TLS (persistés → pas de réémission)
       - caddy_config:/config
 
 volumes:

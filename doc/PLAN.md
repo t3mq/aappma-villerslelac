@@ -4,7 +4,7 @@ Instructions : suis ce document étape par étape, dans l'ordre. Coche chaque ca
 
 ## Étape 0 — Analyse
 - [x] Analyser la maquette dans `doc/` (structure, sections, style visuel, palette, typographie)
-- [x] Lister les photos disponibles dans `doc/photo/` et leur usage potentiel
+- [x] Lister les photos disponibles dans `doc/photos/` et leur usage potentiel
 - [x] Identifier les parties incomplètes ou manquantes de la maquette
 - [x] Proposer une complétion cohérente avec le style existant (à valider avant de coder)
 
@@ -13,6 +13,7 @@ Instructions : suis ce document étape par étape, dans l'ordre. Coche chaque ca
 - [x] Page d'accueil (hero + aperçu des 2-3 dernières actualités + présentation de l'association)
 - [x] Footer avec lien "Admin" discret vers `/admin/login`
 - [x] Site responsive (mobile / tablette / desktop)
+- [x] Page 404 pour les adresses inconnues
 
 ## Étape 2 — Section Actualités (public)
 - [x] Page liste des actualités (toutes)
@@ -23,22 +24,33 @@ Instructions : suis ce document étape par étape, dans l'ordre. Coche chaque ca
 - [x] Liste des événements à venir (concours, sorties, dates d'ouverture/fermeture)
 - [x] Affichage simple : titre, date, description
 
-## Étape 4 — Section Documents (public)
-- [x] Page listant les documents téléchargeables (règlement, cartes/permis, comptes-rendus)
+## Étape 4 — Section Documents (administration uniquement)
+- [x] Registre des documents de l'association (règlement, cartes/permis, comptes rendus)
+- [x] **Décision** : les documents ne sont **pas** publiés côté visiteur. Ils
+      restent accessibles uniquement depuis l'espace d'administration ; l'API
+      elle-même exige une authentification pour les lire.
 
 ## Étape 5 — Authentification admin
 - [x] Page de connexion `/admin/login` (email + mot de passe)
-- [x] Interface uniquement pour l'instant (pas de vraie auth backend à ce stade)
+- [x] Authentification réelle côté serveur (bcrypt + JWT, compte défini par
+      variables d'environnement, tentatives de connexion limitées)
 
 ## Étape 6 — Espace admin
 - [x] Dashboard admin avec accès aux sections suivantes :
   - [x] Gestion des actualités (créer / modifier / supprimer)
   - [x] Gestion des événements (créer / modifier / supprimer)
-  - [x] Gestion des documents (upload / suppression)
-  - [x] Gestion des adhérents (liste, ajout, suppression, statut cotisation)
-  - [x] Gestion de la galerie photos (upload / suppression)
+  - [x] Gestion des documents (ajout / suppression)
+  - [x] Gestion des adhérents (liste, ajout, modification, suppression, statut cotisation)
+  - [x] Gestion de la galerie photos (ajout / suppression)
+- [ ] **Reste à faire** : envoi de fichiers depuis le navigateur (documents et
+      photos). Les éléments sont pour l'instant référencés par leur nom de
+      fichier / leur adresse dans `public/photos`. Nécessite une route d'upload,
+      un volume de stockage et le service des fichiers côté serveur.
 
 ## Étape 7 — Finitions
 - [x] Vérifier la cohérence visuelle entre toutes les pages
 - [x] Vérifier le responsive sur toutes les pages, y compris admin
 - [x] Nettoyer le code (composants réutilisables, pas de duplication)
+- [x] Orthographe et typographie françaises (accents, apostrophes, ponctuation)
+- [x] Gestion des erreurs et des états vides sur toutes les pages
+- [x] Durcissement du déploiement (`.env.example`, `.gitignore`, healthchecks)

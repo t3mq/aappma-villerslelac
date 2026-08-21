@@ -1,29 +1,40 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { newsApi, eventsApi, documentsApi, membersApi, photosApi } from '../api';
+import { useAuth } from './AuthContext';
 
 const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
+  const { authed } = useAuth();
+
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [members, setMembers] = useState([]);
   const [gallery, setGallery] = useState([]);
 
-  // ── Fetch public data on mount ──
+  // ── Données publiques, chargées au démarrage ──
   useEffect(() => {
     newsApi.getAll().then(setNews).catch(console.error);
     eventsApi.getAll().then(setEvents).catch(console.error);
-    documentsApi.getAll().then(setDocuments).catch(console.error);
     photosApi.getAll().then(setGallery).catch(console.error);
   }, []);
 
-  // ── Fetch members (requires auth, called from admin pages) ──
-  const fetchMembers = useCallback(() => {
+  // ── Données réservées à l'administration ──
+  // Documents et adhérents ne sont jamais exposés aux visiteurs : ils ne sont
+  // chargés qu'une fois connecté, ce qui alimente aussi les compteurs du
+  // tableau de bord sans avoir à visiter chaque page au préalable.
+  useEffect(() => {
+    if (!authed) {
+      setDocuments([]);
+      setMembers([]);
+      return;
+    }
+    documentsApi.getAll().then(setDocuments).catch(console.error);
     membersApi.getAll().then(setMembers).catch(console.error);
-  }, []);
+  }, [authed]);
 
-  // ── News CRUD ──
+  // ── Actualités ──
   const addNews = async (item) => {
     const created = await newsApi.create(item);
     setNews((prev) => [created, ...prev]);
@@ -37,7 +48,7 @@ export function DataProvider({ children }) {
     setNews((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // ── Events CRUD ──
+  // ── Événements ──
   const addEvent = async (item) => {
     const created = await eventsApi.create(item);
     setEvents((prev) => [...prev, created]);
@@ -51,7 +62,7 @@ export function DataProvider({ children }) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
-  // ── Documents CRUD ──
+  // ── Documents ──
   const addDocument = async (item) => {
     const created = await documentsApi.create(item);
     setDocuments((prev) => [created, ...prev]);
@@ -61,7 +72,7 @@ export function DataProvider({ children }) {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   };
 
-  // ── Members CRUD ──
+  // ── Adhérents ──
   const addMember = async (item) => {
     const created = await membersApi.create(item);
     setMembers((prev) => [...prev, created]);
@@ -75,7 +86,7 @@ export function DataProvider({ children }) {
     setMembers((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // ── Gallery CRUD ──
+  // ── Galerie ──
   const addPhoto = async (item) => {
     const created = await photosApi.create(item);
     setGallery((prev) => [created, ...prev]);
@@ -91,7 +102,7 @@ export function DataProvider({ children }) {
         news, addNews, updateNews, deleteNews,
         events, addEvent, updateEvent, deleteEvent,
         documents, addDocument, deleteDocument,
-        members, fetchMembers, addMember, updateMember, deleteMember,
+        members, addMember, updateMember, deleteMember,
         gallery, addPhoto, deletePhoto,
       }}
     >
@@ -102,6 +113,6 @@ export function DataProvider({ children }) {
 
 export function useData() {
   const ctx = useContext(DataContext);
-  if (!ctx) throw new Error('useData must be used within DataProvider');
+  if (!ctx) throw new Error('useData doit être utilisé dans un DataProvider.');
   return ctx;
 }
