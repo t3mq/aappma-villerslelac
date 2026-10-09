@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { newsApi, eventsApi, documentsApi, membersApi, photosApi } from '../api';
+import { newsApi, eventsApi, documentsApi, foldersApi, membersApi, photosApi } from '../api';
 import { useAuth } from './AuthContext';
 
 const DataContext = createContext(null);
@@ -10,6 +10,7 @@ export function DataProvider({ children }) {
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [members, setMembers] = useState([]);
   const [gallery, setGallery] = useState([]);
 
@@ -27,10 +28,12 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (!authed) {
       setDocuments([]);
+      setFolders([]);
       setMembers([]);
       return;
     }
     documentsApi.getAll().then(setDocuments).catch(console.error);
+    foldersApi.getAll().then(setFolders).catch(console.error);
     membersApi.getAll().then(setMembers).catch(console.error);
   }, [authed]);
 
@@ -62,14 +65,33 @@ export function DataProvider({ children }) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
-  // ── Documents ──
-  const addDocument = async (item) => {
-    const created = await documentsApi.create(item);
-    setDocuments((prev) => [created, ...prev]);
+  // ── Espace documents ──
+  const uploadDocuments = async (files, folderId) => {
+    const created = await documentsApi.upload(files, folderId);
+    setDocuments((prev) => [...created, ...prev]);
+  };
+  // `changes` : { title } pour renommer, { folderId } pour déplacer.
+  const updateDocument = async (id, changes) => {
+    const updated = await documentsApi.update(id, changes);
+    setDocuments((prev) => prev.map((d) => (d.id === id ? updated : d)));
   };
   const deleteDocument = async (id) => {
     await documentsApi.delete(id);
     setDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const createFolder = async (item) => {
+    const created = await foldersApi.create(item);
+    setFolders((prev) => [...prev, created]);
+  };
+  // `changes` : { name } pour renommer, { parentId } pour déplacer.
+  const updateFolder = async (id, changes) => {
+    const updated = await foldersApi.update(id, changes);
+    setFolders((prev) => prev.map((f) => (f.id === id ? updated : f)));
+  };
+  const deleteFolder = async (id) => {
+    await foldersApi.delete(id);
+    setFolders((prev) => prev.filter((f) => f.id !== id));
   };
 
   // ── Adhérents ──
@@ -101,7 +123,8 @@ export function DataProvider({ children }) {
       value={{
         news, addNews, updateNews, deleteNews,
         events, addEvent, updateEvent, deleteEvent,
-        documents, addDocument, deleteDocument,
+        documents, uploadDocuments, updateDocument, deleteDocument,
+        folders, createFolder, updateFolder, deleteFolder,
         members, addMember, updateMember, deleteMember,
         gallery, addPhoto, deletePhoto,
       }}

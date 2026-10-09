@@ -10,9 +10,14 @@ function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-async function request(path, options = {}) {
+// Renvoie la réponse brute (succès uniquement) : utilisé tel quel pour les
+// téléchargements de fichiers, via request() pour les réponses JSON.
+async function send(path, options = {}) {
   const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const headers = { ...options.headers };
+  // Pour un FormData, le navigateur fixe lui-même le Content-Type (avec la
+  // frontière multipart) : le forcer casserait l'envoi.
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let res;
@@ -27,12 +32,18 @@ async function request(path, options = {}) {
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
   }
 
-  // Le corps n'est pas toujours du JSON (erreur renvoyée par le proxy,
-  // réponse vide…) : on ne casse pas sur un parsing impossible.
-  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    // Le corps n'est pas toujours du JSON (erreur renvoyée par le proxy,
+    // réponse vide…) : on ne casse pas sur un parsing impossible.
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || `Erreur serveur (${res.status}).`);
+  }
+  return res;
+}
 
-  if (!res.ok) throw new Error(data?.error || `Erreur serveur (${res.status}).`);
-  return data;
+async function request(path, options) {
+  const res = await send(path, options);
+  return res.json().catch(() => null);
 }
 
 // Authentification
@@ -58,11 +69,27 @@ export const eventsApi = {
   delete: (id) => request(`/events/${id}`, { method: 'DELETE' }),
 };
 
-// Documents — réservés à l'espace d'administration, jamais exposés aux visiteurs.
+// Espace documents — réservé à l'administration, jamais exposé aux visiteurs.
+export const foldersApi = {
+  getAll: () => request('/folders'),
+  create: (data) => request('/folders', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id) => request(`/folders/${id}`, { method: 'DELETE' }),
+};
+
 export const documentsApi = {
   getAll: () => request('/documents'),
-  create: (data) => request('/documents', { method: 'POST', body: JSON.stringify(data) }),
+  upload: (files, folderId) => {
+    const body = new FormData();
+    if (folderId !== null) body.append('folderId', String(folderId));
+    for (const file of files) body.append('files', file);
+    return request('/documents', { method: 'POST', body });
+  },
+  update: (id, data) => request(`/documents/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (id) => request(`/documents/${id}`, { method: 'DELETE' }),
+  // Le fichier exige le jeton d'authentification : un simple lien <a href> ne
+  // l'enverrait pas, d'où la récupération en Blob.
+  download: async (id) => (await send(`/documents/${id}/file`)).blob(),
 };
 
 // Adhérents

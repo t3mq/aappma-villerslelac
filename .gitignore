@@ -10,6 +10,9 @@ build/
 .env.*
 !.env.example
 
+# Fichiers envoyés dans l'espace documents (développement local)
+site/server/uploads/
+
 # Logs
 *.log
 npm-debug.log*

@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// Les actualités, événements, documents, adhérents et photos ci-dessous ne sont
+// Les actualités, événements, dossiers, adhérents et photos ci-dessous ne sont
 // que des exemples de démonstration. Ils ne sont insérés que si SEED_DEMO_DATA
 // vaut "true" : une mise en production part ainsi d'un site vide, sans contenus
 // fictifs ni adhérents inventés.
@@ -112,17 +112,11 @@ async function main() {
     await prisma.event.create({ data: item });
   }
 
-  // ── Documents ──
-  const docsData = [
-    { title: 'Règlement intérieur 2026', category: 'Règlement', filename: 'reglement-interieur-2026.pdf' },
-    { title: 'Carte des parcours de pêche', category: 'Cartes', filename: 'carte-parcours.pdf' },
-    { title: 'Compte rendu de l’AG 2025', category: 'Comptes rendus', filename: 'cr-ag-2025.pdf' },
-    { title: 'Tarifs des cartes de pêche 2026', category: 'Cartes', filename: 'tarifs-cartes-2026.pdf' },
-    { title: 'Arrêté préfectoral pêche 2026', category: 'Règlement', filename: 'arrete-prefectoral-2026.pdf' },
-  ];
-
-  for (const item of docsData) {
-    await prisma.document.create({ data: item });
+  // ── Dossiers de l'espace documents ──
+  // Seulement des dossiers vides : un document de démonstration n'aurait aucun
+  // fichier réel derrière lui.
+  for (const name of ['Règlement', 'Cartes', 'Comptes rendus']) {
+    await prisma.folder.create({ data: { name } });
   }
 
   // ── Adhérents ──

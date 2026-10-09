@@ -32,12 +32,34 @@ model Event {
   createdAt   DateTime @default(now())
 }
 
+// Arborescence de l'espace documents : un dossier sans parent est à la racine.
+model Folder {
+  id        Int        @id @default(autoincrement())
+  name      String
+  parentId  Int?
+  parent    Folder?    @relation("FolderTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Folder[]   @relation("FolderTree")
+  documents Document[]
+  createdAt DateTime   @default(now())
+}
+
 model Document {
-  id        Int      @id @default(autoincrement())
-  title     String
-  category  String
-  filename  String
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  // Nom affiché et proposé au téléchargement, modifiable (renommage).
+  title      String
+  // Ancienne classification fixe, remplacée par les dossiers. Conservée en
+  // facultatif car `db push` refuse (à raison) de supprimer une colonne.
+  category   String?
+  // Nom d'origine du fichier envoyé.
+  filename   String
+  // Nom du fichier sur le disque (UPLOAD_DIR). Absent pour les anciennes
+  // entrées du registre, créées avant l'envoi de fichiers.
+  storageKey String?
+  mimeType   String?
+  size       Int?
+  folderId   Int?
+  folder     Folder?  @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
 }
 
 model Member {

@@ -39,13 +39,13 @@ Instructions : suis ce document étape par étape, dans l'ordre. Coche chaque ca
 - [x] Dashboard admin avec accès aux sections suivantes :
   - [x] Gestion des actualités (créer / modifier / supprimer)
   - [x] Gestion des événements (créer / modifier / supprimer)
-  - [x] Gestion des documents (ajout / suppression)
+  - [x] Gestion des documents : envoi réel de fichiers par glisser-déposer,
+        dossiers (création, imbrication), renommage, déplacement, téléchargement
   - [x] Gestion des adhérents (liste, ajout, modification, suppression, statut cotisation)
   - [x] Gestion de la galerie photos (ajout / suppression)
-- [ ] **Reste à faire** : envoi de fichiers depuis le navigateur (documents et
-      photos). Les éléments sont pour l'instant référencés par leur nom de
-      fichier / leur adresse dans `public/photos`. Nécessite une route d'upload,
-      un volume de stockage et le service des fichiers côté serveur.
+- [ ] **Reste à faire** : envoi de photos depuis le navigateur. Elles sont pour
+      l'instant référencées par leur adresse dans `public/photos`. L'espace
+      documents (multer + volume `uploads_data`) peut servir de modèle.
 
 ## Étape 7 — Finitions
 - [x] Vérifier la cohérence visuelle entre toutes les pages

@@ -28,6 +28,9 @@ services:
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       PORT: 3001
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads   # fichiers de l'espace documents
     depends_on:
       db:
         condition: service_healthy
@@ -61,5 +64,6 @@ services:
 
 volumes:
   db_data:
+  uploads_data:
   caddy_data:
   caddy_config:

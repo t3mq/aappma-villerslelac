@@ -56,11 +56,16 @@ Scripts disponibles :
 | Actualités    | publique — accueil et page `/actualites`            |
 | Événements    | publique — page `/evenements`                       |
 | Galerie       | administration (les photos publiques sont dans `public/photos`) |
-| Documents     | **administration uniquement** — registre interne, jamais publié |
+| Documents     | **administration uniquement** — espace de fichiers privé, jamais publié |
 | Adhérents     | **administration uniquement**                       |
 
-L'envoi de fichiers (documents, photos) n'est pas géré par le site : les
-éléments sont référencés par leur nom de fichier ou leur adresse.
+L'espace documents fonctionne comme un petit explorateur de fichiers : envoi
+par glisser-déposer (25 Mo max par fichier, PDF / bureautique / images / zip),
+dossiers imbriqués, renommage et déplacement (glisser sur un dossier ou bouton
+« Déplacer »). Les fichiers sont stockés dans `UPLOAD_DIR` (volume Docker
+`uploads_data`) et ne sont servis qu'aux administrateurs connectés.
+
+Les photos de la galerie restent référencées par leur adresse.
 
 ## Mise en production
 

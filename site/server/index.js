@@ -3,6 +3,11 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
+import path from 'node:path';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -16,6 +21,11 @@ if (!JWT_SECRET) {
 }
 
 const PORT = process.env.PORT || 3001;
+
+// Fichiers de l'espace documents. En Docker, ce dossier est un volume
+// (uploads_data) : les fichiers survivent aux reconstructions de l'image.
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || 'uploads');
+mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Derrière Caddy : req.ip doit refléter l'adresse réelle du client,
 // sans quoi le limiteur de connexions compterait toutes les requêtes ensemble.
@@ -95,8 +105,13 @@ function identifier(param) {
   return n;
 }
 
+// null (racine) ou l'identifiant d'un dossier.
+function optionalIdentifier(value) {
+  if (value === undefined || value === null || value === '' || value === 'null') return null;
+  return identifier(value);
+}
+
 const ROLES = ['Président', 'Trésorier', 'Secrétaire', 'Membre'];
-const CATEGORIES = ['Règlement', 'Cartes', 'Comptes rendus'];
 
 // ── Limitation des tentatives de connexion (anti force brute) ──
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -231,22 +246,205 @@ app.delete('/api/events/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Documents (réservés à l'espace d'administration) ──
+// ── Espace documents (réservé à l'administration) ──
+// Types acceptés, reconnus à l'extension : le type MIME annoncé par le
+// navigateur n'est pas fiable. HTML et SVG sont volontairement exclus : ouverts
+// depuis l'administration, ils pourraient exécuter du script sur le domaine.
+const FILE_TYPES = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  odt: 'application/vnd.oasis.opendocument.text',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  odp: 'application/vnd.oasis.opendocument.presentation',
+  rtf: 'application/rtf',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  zip: 'application/zip',
+};
+const MAX_FILE_SIZE_MB = 25;
+const MAX_FILES_PER_UPLOAD = 20;
+// Un champ String Prisma devient un VARCHAR(191) sous MySQL.
+const MAX_NAME_LENGTH = 191;
+
+function extensionOf(name) {
+  return path.extname(name).slice(1).toLowerCase();
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOAD_DIR,
+    // Nom aléatoire sans extension : le nom choisi par l'utilisateur ne touche
+    // jamais le système de fichiers.
+    filename: (_req, _file, cb) => cb(null, randomUUID()),
+  }),
+  // Sans cela, les noms de fichiers sont décodés en latin1 et les accents
+  // (« Règlement ») arrivent illisibles.
+  defParamCharset: 'utf8',
+  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, files: MAX_FILES_PER_UPLOAD },
+  fileFilter: (_req, file, cb) => {
+    if (FILE_TYPES[extensionOf(file.originalname)]) return cb(null, true);
+    cb(new HttpError(400, `Type de fichier non accepté : « ${file.originalname} ».`));
+  },
+});
+
+async function removeStoredFile(storageKey) {
+  if (!storageKey) return;
+  // Un fichier déjà absent du disque n'empêche pas de retirer l'entrée.
+  await unlink(path.join(UPLOAD_DIR, storageKey)).catch((err) => {
+    if (err.code !== 'ENOENT') console.error(err);
+  });
+}
+
+async function assertFolderExists(id) {
+  if (id === null) return;
+  if (!(await prisma.folder.findUnique({ where: { id } }))) {
+    throw new HttpError(404, 'Dossier introuvable.');
+  }
+}
+
+async function assertUniqueFolderName(name, parentId, exceptId) {
+  const duplicate = await prisma.folder.findFirst({
+    where: { name, parentId, ...(exceptId && { NOT: { id: exceptId } }) },
+  });
+  if (duplicate) throw new HttpError(409, `Un dossier « ${name} » existe déjà à cet endroit.`);
+}
+
+// Remonte depuis la destination jusqu'à la racine : si l'on croise le dossier
+// déplacé, la destination est l'un de ses descendants (boucle impossible).
+async function assertNotInsideItself(folderId, targetParentId) {
+  let current = targetParentId;
+  while (current !== null) {
+    if (current === folderId) {
+      throw new HttpError(400, 'Un dossier ne peut pas être déplacé dans lui-même ou dans l’un de ses sous-dossiers.');
+    }
+    const folder = await prisma.folder.findUnique({ where: { id: current }, select: { parentId: true } });
+    if (!folder) throw new HttpError(404, 'Dossier introuvable.');
+    current = folder.parentId;
+  }
+}
+
+// Dossiers
+app.get('/api/folders', auth, async (_req, res) => {
+  res.json(await prisma.folder.findMany({ orderBy: { name: 'asc' } }));
+});
+
+app.post('/api/folders', auth, async (req, res) => {
+  const name = text(req.body?.name, 'nom', { max: MAX_NAME_LENGTH });
+  const parentId = optionalIdentifier(req.body?.parentId);
+  await assertFolderExists(parentId);
+  await assertUniqueFolderName(name, parentId);
+  res.status(201).json(await prisma.folder.create({ data: { name, parentId } }));
+});
+
+// Renommage et/ou déplacement : seuls les champs présents sont modifiés.
+app.patch('/api/folders/:id', auth, async (req, res) => {
+  const id = identifier(req.params.id);
+  const body = req.body ?? {};
+  const current = await prisma.folder.findUnique({ where: { id } });
+  if (!current) throw new HttpError(404, 'Dossier introuvable.');
+
+  const data = {};
+  if ('name' in body) data.name = text(body.name, 'nom', { max: MAX_NAME_LENGTH });
+  if ('parentId' in body) {
+    data.parentId = optionalIdentifier(body.parentId);
+    await assertNotInsideItself(id, data.parentId);
+  }
+  await assertUniqueFolderName(data.name ?? current.name, data.parentId ?? current.parentId, id);
+  res.json(await prisma.folder.update({ where: { id }, data }));
+});
+
+// Pas de suppression récursive : vider un dossier d'un clic par erreur
+// effacerait des fichiers sans retour possible.
+app.delete('/api/folders/:id', auth, async (req, res) => {
+  const id = identifier(req.params.id);
+  const [subfolders, documents] = await Promise.all([
+    prisma.folder.count({ where: { parentId: id } }),
+    prisma.document.count({ where: { folderId: id } }),
+  ]);
+  if (subfolders + documents > 0) {
+    throw new HttpError(409, 'Ce dossier n’est pas vide : déplacez ou supprimez d’abord son contenu.');
+  }
+  await prisma.folder.delete({ where: { id } });
+  res.json({ ok: true });
+});
+
+// Documents
 app.get('/api/documents', auth, async (_req, res) => {
   res.json(await prisma.document.findMany({ orderBy: { createdAt: 'desc' } }));
 });
 
-app.post('/api/documents', auth, async (req, res) => {
-  const data = {
-    title: text(req.body?.title, 'titre', { max: 200 }),
-    category: oneOf(req.body?.category, 'catégorie', CATEGORIES),
-    filename: text(req.body?.filename, 'nom de fichier', { max: 255 }),
-  };
-  res.status(201).json(await prisma.document.create({ data }));
+app.post('/api/documents', auth, upload.array('files'), async (req, res) => {
+  const files = req.files ?? [];
+  try {
+    if (files.length === 0) throw new HttpError(400, 'Aucun fichier reçu.');
+    const folderId = optionalIdentifier(req.body?.folderId);
+    await assertFolderExists(folderId);
+    const created = await prisma.$transaction(
+      files.map((file) =>
+        prisma.document.create({
+          data: {
+            title: file.originalname.slice(0, MAX_NAME_LENGTH),
+            filename: file.originalname.slice(0, MAX_NAME_LENGTH),
+            storageKey: file.filename,
+            mimeType: FILE_TYPES[extensionOf(file.originalname)],
+            size: file.size,
+            folderId,
+          },
+        }),
+      ),
+    );
+    res.status(201).json(created);
+  } catch (err) {
+    // Rien en base : les fichiers déjà écrits sur le disque seraient orphelins.
+    await Promise.all(files.map((file) => removeStoredFile(file.filename)));
+    throw err;
+  }
+});
+
+// Renommage et/ou déplacement : seuls les champs présents sont modifiés.
+app.patch('/api/documents/:id', auth, async (req, res) => {
+  const id = identifier(req.params.id);
+  const body = req.body ?? {};
+  const data = {};
+  if ('title' in body) data.title = text(body.title, 'nom', { max: MAX_NAME_LENGTH });
+  if ('folderId' in body) {
+    data.folderId = optionalIdentifier(body.folderId);
+    await assertFolderExists(data.folderId);
+  }
+  res.json(await prisma.document.update({ where: { id }, data }));
+});
+
+app.get('/api/documents/:id/file', auth, async (req, res, next) => {
+  const doc = await prisma.document.findUnique({ where: { id: identifier(req.params.id) } });
+  if (!doc) throw new HttpError(404, 'Élément introuvable.');
+  if (!doc.storageKey) throw new HttpError(404, 'Aucun fichier n’est associé à ce document.');
+
+  // Un nom renommé sans son extension donnerait un fichier que l'ordinateur
+  // ne sait plus ouvrir : on remet celle d'origine.
+  const ext = path.extname(doc.filename);
+  const name = extensionOf(doc.title) === ext.slice(1).toLowerCase() ? doc.title : doc.title + ext;
+
+  res.attachment(name);
+  res.type(doc.mimeType ?? 'application/octet-stream');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.sendFile(path.join(UPLOAD_DIR, doc.storageKey), (err) => {
+    if (err && !res.headersSent) next(new HttpError(404, 'Fichier introuvable sur le serveur.'));
+  });
 });
 
 app.delete('/api/documents/:id', auth, async (req, res) => {
-  await prisma.document.delete({ where: { id: identifier(req.params.id) } });
+  const doc = await prisma.document.delete({ where: { id: identifier(req.params.id) } });
+  await removeStoredFile(doc.storageKey);
   res.json({ ok: true });
 });
 
@@ -306,6 +504,15 @@ app.use((err, _req, res, _next) => {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: `Fichier trop volumineux (${MAX_FILE_SIZE_MB} Mo maximum).` });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: `${MAX_FILES_PER_UPLOAD} fichiers maximum par envoi.` });
+    }
+    return res.status(400).json({ error: 'Envoi de fichiers invalide.' });
+  }
   // P2025 : Prisma n'a pas trouvé l'enregistrement visé par un update/delete.
   if (err?.code === 'P2025') {
     return res.status(404).json({ error: 'Élément introuvable.' });
@@ -313,6 +520,10 @@ app.use((err, _req, res, _next) => {
   // P2002 : violation d'une contrainte d'unicité.
   if (err?.code === 'P2002') {
     return res.status(409).json({ error: 'Cet élément existe déjà.' });
+  }
+  // P2003 : contrainte de clé étrangère (ex. dossier encore utilisé).
+  if (err?.code === 'P2003') {
+    return res.status(409).json({ error: 'Cet élément est encore utilisé.' });
   }
   console.error(err);
   res.status(500).json({ error: 'Erreur serveur.' });
