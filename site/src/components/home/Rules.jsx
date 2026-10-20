@@ -5,10 +5,9 @@ const RULES = [
     icon: Calendar,
     title: 'Périodes d’ouverture',
     items: [
-      '1re catégorie : de la 2e semaine de mars au 3e dimanche de septembre',
+      '1re catégorie : de la 1 mars au dernier dimanche de septembre',
       '2e catégorie (eaux françaises uniquement, du lac de Chaillexon au pont de Sobey) : du 1er samedi de juin au 31 janvier',
       '2e catégorie (eaux franco-suisses, du lac de Chaillexon au barrage du Châtelot) : du 16 juin au 28 février',
-      'Truite : du 1er mars au dernier dimanche de septembre',
       'Ombre commun : ouverture le 16 mai',
       'Brochet : du 1er mai au dernier dimanche de janvier',
     ],

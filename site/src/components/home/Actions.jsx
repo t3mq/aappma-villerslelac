@@ -15,7 +15,7 @@ const ACTIONS = [
     icon: Fish,
     title: 'Alevinages raisonnés',
     description:
-      'Pour soutenir les populations piscicoles, nous procédons à des alevinages ciblés en truites fario et en ombres, en privilégiant toujours les souches locales.',
+      'Pour soutenir les populations piscicoles, nous procédons à des alevinages ciblés en brochet perché et sandre, en privilégiant toujours les souches locales.',
     images: [
       '/photos/PHOTO-2024-11-03-11-12-48.jpg',
       '/photos/PHOTO-2025-11-15-10-26-56.jpg',
